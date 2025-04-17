@@ -1,28 +1,34 @@
-# Use an official Node runtime as a parent image
-FROM node:14-slim AS build
-
-# Set the working directory in the container
+#Build stage
+FROM node:16-alpine AS build
 WORKDIR /usr/src/app
-
-# Copy the package.json and package-lock.json files to the container
+#Copy package files in package*.json
 COPY package*.json ./
-
-# Install application dependencies
-RUN npm install
-
-# Copy the rest of the application code to the container
+#Install dependencies
+RUN npm ci
+#Copy code
 COPY . .
+#Build the client application
+RUN npm run build
 
-FROM alpine:3.16.7
+#Using alpine version 3.21.3 with a minimal server
+FROM alpine:3.21.3
+
+#Install Node.js and a minimal web server,creates a single layer by chaining the instruction under single RUN command
+# To enhance security create a non root system user to run you app
+RUN apk add --no-cache nodejs npm && \
+    npm install -g serve@14.2.4 && \
+    npm cache clean --force && \
+    addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
 WORKDIR /app
+#copy files from build stage and assign ownership to nodejs user and group
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/build ./build
 
-RUN apk update && apk add npm
+#switch context to non root user
+USER nodejs
 
-COPY --from=build /usr/src/app /app
-
-# Expose the port the app runs on
 EXPOSE 3000
 
-# Define the command to run your app
-CMD ["npm", "start"]
+#Use serve installation to host the files
+CMD ["serve","-s","build","-l","3000"]
