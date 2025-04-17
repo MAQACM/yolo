@@ -24,7 +24,7 @@ RUN apk add --no-cache nodejs npm && \
 WORKDIR /app
 #copy files from build stage and assign ownership to nodejs user and group
 COPY --from=build --chown=nodejs:nodejs /usr/src/app/build ./build
-
+# Set environment variables for the production container
 #switch context to non root user
 USER nodejs
 
