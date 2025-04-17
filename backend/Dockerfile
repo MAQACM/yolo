@@ -1,29 +1,34 @@
-# Use an official Node runtime as a parent image
-FROM node:14 AS build
+#Build stage
+FROM node:23-alpine3.20 AS build
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy the package.json and package-lock.json files to the container
+#Copy package files and only install necessary dependancies
 COPY package*.json ./
-
-# Install application dependencies
-RUN npm install
-
-# Copy the rest of the application code to the container
+RUN npm ci
+#Copy necessary source files
 COPY . .
 
-#Add multi-stage build
-FROM alpine:3.16.7
+#Using alpine version 3.21.3
+FROM alpine:3.21.3
+
+#Install node.js runtime and create non root user
+RUN apk add --no-cache nodejs && \
+    addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
 WORKDIR /app
+# Copy only the minimal required files from build stage
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/package.json ./
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/node_modules ./node_modules
 
-RUN apk update && apk add --update nodejs
+# Copy application code - adjust these paths based on your project structure
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/*.js ./
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/routes ./routes
+COPY --from=build --chown=nodejs:nodejs /usr/src/app/models ./models
 
-COPY --from=build /usr/src/app /app
+USER nodejs
 
-# Expose the port the app runs on
 EXPOSE 5000
-
-# Define the command to run your app
+# Start application
 CMD ["node", "server.js"]
