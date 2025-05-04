@@ -1,0 +1,32 @@
+---
+#Variables to be used across the playbook
+
+#App Specs
+app_name: yolomy-ecommerce
+app_repo: https://github.com/MAQACM/yolo.git
+app_clone_path: /opt/yolo
+app_branch: master
+app_network: app-net
+
+#Docker Specs
+docker_compose_version: "2.32.4"
+
+#MongoDB Specs
+mongodb_container_name: app-mongo
+mongodb_port: 27017
+mongodb_data_dir: /data/mongodb
+mongodb_image: mongo
+
+
+#Backend Specs
+backend_container_name: mark-yolo-backend
+backend_image_name: maqacm/mark-yolo-backend
+backend_image_tag: v1.0.0
+backend_port: 4000
+backend_external_port: 4000
+
+#Frontend Specs
+frontend_container_name: mark-yolo-client
+frontend_image_name: maqacm/mark-yolo-client
+frontend_image_tag: v1.0.0
+frontend_port: 3000
