@@ -1,0 +1,79 @@
+---
+# Setup docker for the vm
+
+- name: Remove old docker
+  apt:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - docker
+    - docker-engine
+    - docker.io
+    - containerd
+    - runc
+  tags: docker
+
+- name: Add docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  tags: docker
+
+- name: Add docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: yes
+  tags: docker
+
+- name: Install docker dependencies
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+  tags: docker
+
+- name: Setup docker group
+  group:
+    name: docker
+    state: present
+  tags: docker
+
+- name: Add user to docker group
+  user:
+    name: vagrant
+    groups: 
+      - docker
+    append: yes
+  tags: docker
+
+- name: Validate docker compose is installed
+  command: docker-compose --version
+  register: docker_compose_version_result
+  changed_when: false
+  failed_when: false
+  tags: docker
+
+
+- name: Install docker compose
+  block:
+    - name: Download docker compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-Linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: 0755
+      register: docker_compose_download
+  when: docker_compose_version_result.rc != 0 or docker_compose_version_result.stdout.find(docker_compose_version) == -1
+  tags: docker
+
+- name: Start and enable docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  tags: docker
+

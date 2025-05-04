@@ -1,0 +1,23 @@
+---
+#MongoDb setup
+
+- name: Create MongoDb Directory
+  file:
+    path: "{{ mongodb_data_dir }}"
+    state: directory
+    mode: 0755
+  tags: mongodb
+
+- name: Check if Mongo Container exists
+  command: docker ps -a -q -f name={{ mongodb_container_name }}
+  register: mongo_container_exists
+  changed_when: false
+  tags: mongodb
+
+- name: Pull MongoDb image
+  command: docker pull {{ mongodb_image }}
+  changed_when: false
+  tags: 
+    - database
+    - image
+

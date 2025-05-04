@@ -1,0 +1,71 @@
+---
+#common tasks for system setup
+
+- name: Install common required packages
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg-agent
+    - software-properties-common
+    - git
+    - python3-pip
+    - python3-setuptools
+    - wget
+    - unzip
+  tags: common
+
+# Install Node.js and npm
+- name: Add Node.js repository
+  shell: curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  args:
+    creates: /etc/apt/sources.list.d/nodesource.list
+  tags: common
+
+- name: Install Node.js and npm
+  apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+  tags: common
+
+- name: Install serve package globally using shell
+  shell: npm install -g serve
+  # args:
+  #   creates: /usr/local/bin/serve
+  tags: common
+
+- name: create app directory
+  file:
+    path: "{{ app_clone_path }}"
+    state: directory
+    mode: 0755
+  tags: common
+
+- name: Clone app repositor
+  git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_clone_path }}"
+    clone: yes
+    update: yes
+    version: "{{ app_branch }}"
+    force: yes
+  tags: common
+
+- name: Validate pip is updated
+  pip:
+    name: pip
+    state: latest
+  tags: common
+
+- name: Install python dependencies
+  pip:
+    name:
+      - docker
+      - docker-compose
+    state: present
+  tags: common

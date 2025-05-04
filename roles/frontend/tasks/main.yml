@@ -1,0 +1,22 @@
+---
+
+- name: validate client directory
+  file: 
+    path: "{{ app_clone_path }}/client"
+    state: directory
+  tags: frontend
+
+- name: build frontend image
+  docker_image:
+    name: "{{ frontend_image_name }}"
+    tag: "{{ frontend_image_tag }}"
+    build:
+      path: "{{ app_clone_path }}/client"
+      args:
+        NODE_ENV: "production"
+        BACKEND_APP_API_URL: "http://192.168.56.10:4000"
+      pull: yes
+    source: build
+    state: present
+  tags: frontend
+

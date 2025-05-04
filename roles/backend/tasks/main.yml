@@ -1,0 +1,19 @@
+---
+# Setup the backend 
+
+- name: validate backend directory
+  file: 
+    path: "{{ app_clone_path }}/backend"
+    state: directory
+  tags: backend
+
+- name: Build the backend image
+  docker_image:
+    name: "{{ backend_image_name }}"
+    tag: "{{ backend_image_tag }}"
+    build:
+      path: "{{ app_clone_path }}/backend"
+      pull: yes
+    source: build
+    state: present
+  tags: backend

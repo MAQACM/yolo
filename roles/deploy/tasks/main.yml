@@ -1,0 +1,48 @@
+---
+#Deploy the tasks using docker compose
+- name: copy docker-compose.yml
+  copy:
+    src: "{{ app_clone_path }}/docker-compose.yaml"
+    dest: "{{ app_clone_path }}/docker-compose.yaml"
+    remote_src: yes
+  tags: deploy
+
+- name: run docker compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_clone_path }}"
+    state: present
+  tags: deploy
+
+- name: Check if all containers are running
+  command: docker ps -q --filter name={{ item }}
+  loop:
+    - "{{ mongodb_container_name }}"
+    - "{{ backend_container_name }}"
+    - "{{ frontend_container_name }}"
+  register: container_status
+  changed_when: false
+  tags: deploy
+
+- name: Log runing containers
+  debug:
+    msg: "Container {{ item }} is running"
+  loop: "{{ container_status.results | map(attribute='stdout') | list }}"
+  when: item != ""
+  tags: deploy
+
+- name: Check application endpoints are serving requests
+  uri:
+    url: "{{ item.url}}"
+    status_code: "{{ item.status }}"
+  loop:
+    - { url: "http://localhost:{{ backend_external_port }}", status: 200 }
+    - { url: "http://localhost:{{ frontend_port }}", status: 200 }
+  ignore_errors: yes
+  register: endpoint_status
+  tags: deploy
+
+- name: Log application endpoints status
+  debug:
+    msg: "Endpoint {{ item.item.url }} returned status code {{ item.status }}"
+  loop: "{{ endpoint_status.results }}"
+  tags: deploy
