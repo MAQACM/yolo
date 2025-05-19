@@ -1,100 +1,109 @@
-# Yolomy E-commerce Ansible Automation
+# Kubernetes Application Deployment
 
-This project automates the deployment of the Yolomy e-commerce platform using Ansible for configuration management and Docker for containerization.
+This repository contains Kubernetes manifests for deploying the Mark Yolo application (frontend, backend, MongoDB) on Google Kubernetes Engine (GKE).
+
+## Project Overview
+
+This project deploys a containerized application consisting of:
+- A React frontend client (mark-yolo-client)
+- A Node.js backend API (mark-yolo-backend)
+- A MongoDB database with persistent storage using StatefulSets (app-ip-mongo)
+
+## HLD
+
+```
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│                 │      │                 │      │                 │
+│  mark-yolo-     │      │  mark-yolo-     │      │  app-ip-mongo   │
+│  client         │──────▶  backend        │──────▶  StatefulSet    │
+│  (LoadBalancer) │      │  (LoadBalancer) │      │  (Headless Svc) │
+│                 │      │                 │      │                 │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
+       ▲                                                 │
+       │                                                 │
+       │                                                 ▼
+┌──────┴────────┐                               ┌─────────────────┐
+│  Internet     │                               │  Persistent     │
+│  (HTTPS/HTTP) │                               │  Volume         │
+└───────────────┘                               └─────────────────┘
+```
+
+**Key components:**
+- MongoDB StatefulSet for data persistence
+- Backend API Deployment
+- Frontend Web Deployment
+- Various Services for networking
+
+## Prerequisites
+
+- Google Cloud SDK installed
+- Access to a GKE cluster
+- Enable kubernetes API
+- kubectl configured to work with your GKE cluster
+- Docker Hub account (for storing your container images)
+
+## Manual Deployment Steps
+
+1. **Clone this repository:**
+   ```bash
+   git clone https://github.com/MAQACM/yolo.git
+   cd manifests
+   ```
+
+2. **Create a GKE cluster:**
+   ```bash
+   gcloud container clusters create yolo-cluster \
+     --zone us-central1-a \
+     --disk-type=pd-standard \
+     --machine-type=e2-medium
+   ```
+
+3. **Get authentication credentials:**
+   ```bash
+   gcloud container clusters get-credentials yolo-cluster --zone us-central1-a
+   ```
+
+4. **Create a namespace:**
+   ```bash
+   kubectl create namespace yolo-app
+   ```
+
+5. **Deploy MongoDB StatefulSet:**
+   ```bash
+   kubectl create -f mongodb-deployment.yaml -n yolo-app
+   ```
+
+6. **Deploy Backend:**
+   ```bash
+   kubectl create -f backend-deployment.yaml -n yolo-app
+   ```
+
+7. **Deploy Frontend:**
+   ```bash
+   kubectl create -f frontend-deployment.yaml -n yolo-app
+   ```
+
+8. **Get the External IP:**
+   ```bash
+   kubectl get service mark-yolo-client -n yolo-app
+   ```
+   The output will include an EXTERNAL-IP column.
+
+## Accessing the Application
+Current deployment URL: `http://35.247.49.1`
 
 ## Project Structure
 
 ```
-.
-├── Vagrantfile
-├── playbook.yml
-├── vars
-│   └── main.yml
-├── roles
-│   ├── common
-         └──tasks
-             └──main.yml
-│   ├── docker
-          └──tasks
-             └──main.yml
-│   ├── mongodb
-          └──tasks
-             └──main.yml
-│   ├── backend
-          └──tasks
-             └──main.yml
-│   ├── frontend
-          └──tasks
-             └──main.yml
-│   └── deploy
-          └──tasks
-             └──main.yml
-├── README.md
-└── explanation.md
+└── manifests            
+ ├── mongo-deployment.yaml    
+ ├── backend-deployment.yaml      
+ ├── frontend-deployment.yaml  
+├── explanation.md      
+└── README.md                   
 ```
 
-## Prerequisites
+## Implementation Details
 
-- Vagrant
-- VirtualBox
-- Ansible
-- Ansible-galaxy 
+For a detailed explanation of the implementation choices,refer to the [explanation.md](explanation.md) file.
 
-## Getting Started
-
-1. Clone this repository:
-   ```
-   git clone hhttps://github.com/MAQACM/yolo.git
-   cd yolo
-   ```
-
-2. Start the Vagrant VM:
-   ```
-   vagrant up
-   ```
-   This will provision the VM and run the Ansible playbook automatically.
-
-3. Access the application:
-   - Frontend: http://192.168.56.10:3000
-   - Backend API: http://192.168.56.10:4000/api/products
-
-## Features
-
-- Fully automated deployment of a three-tier e-commerce application
-- Containerized architecture with MongoDB, Node.js backend, and React frontend
-- Data persistence with Docker volumes
-- Configurable through Ansible variables
-- Organized with Ansible roles for modularity and reusability
-
-## Manual Execution
-
-If you need to run the playbook manually:
-
-```
-ansible-playbook -i inventory playbook.yml
-```
-
-To run specific parts using tags:
-
-```
-ansible-playbook -i inventory playbook.yml --tags "docker,mongodb"
-```
-
-## Role Descriptions
-See `explanation.md` for detailed information about the execution order and Ansible modules used.
-
-## Testing
-
-To verify the application is running correctly:
-
-1. Navigate to http://192.168.56.10:3000 in your browser
-2. Try adding a product through the provided form
-3. Verify the product appears in the product listing by refreshing the page after addation
-
-## Troubleshooting
-
-- **Container issues**: Check container status with `docker ps -a` inside the VM
-- **Log inspection**: View logs with `docker logs <container_name>`
-- **Network problems**: Verify connectivity with `docker network inspect app-net`
-- **Database issues**: Connect to MongoDB with `docker exec -it app-mongo mongosh`
-- **VBoxManage:error:VERR_VMX_IN_VMX_ROOT_MODE**: Unload KVM modules ` sudo lsof /dev/kvm sudo kill -9 <PID> sudo modprobe -r kvm_intel sudo modprobe -r kvm` or reboot as a last result
