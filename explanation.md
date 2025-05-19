@@ -1,68 +1,55 @@
-# Ansible Playbook Explanation
+# Kubernetes Deployment Explanation
+## 1. Kubernetes Objects
+
+### MongoDB Database
+- **StatefulSet**:
+  - StatefulSets maintain the state of MongoDB across pod restarts and rescheduling
+  - This approach ensures data consistency in distributed database environments
+
+- **Service (Headless)**: A headless service is used for MongoDB to provide network identity to each pod while allowing direct communication to specific instances
+
+### Backend API
+- **Deployment**: For the backend service, a standard Deployment is appropriate because:
+  - The backend is stateless and can be scaled horizontally
+  - Any backend instance can handle requests without needing persistent identity
+  - Rolling updates can be easily managed
+
+- **Service**: LoadBalancer service to ensure the browser is able to access it when user is interacting with client
+
+### Frontend Web Application
+- **Deployment**: Similar to the backend, the frontend is stateless and benefits from:
+  - Horizontal scaling capabilities
+  - Simplified rolling updates and rollbacks
+  - Load balancing across multiple pods
+
+- **Service**: LoadBalancer service to expose the frontend to external traffic
 
 
+## 2. Method Used to Expose Pods to Internet Traffic
 
-## Order of Execution
+I've chosen different exposure methods for different components:
 
-The playbook is executed sequentially, following a logical progression from basic system setup to deploying the complete application. The order is important because each step builds upon the previous ones:
+1. **Frontend** - LoadBalancer Service:
+   - Creates a GCP Load Balancer with an external IP automatically
+   - Provides direct internet access to the frontend application
 
-1. **Common Role** - This role sets up the basic system environment, installs required packages, and clones the application repository. It must run first since all subsequent roles depend on these prerequisites.
+2. **Backend** - LoadBalancer Service:
+   - Since we are not using any backend proxy for client the service has to be exposed externaly via  a loadbalancer.
+   - This will allow the browser to reolve the IP when client is interacting with backend.
 
-2. **Docker Role** - After setting up the basic system, we install Docker and Docker Compose. This is necessary before deploying any containers, so it must come before the application-specific roles.
 
-3. **MongoDB Role** - The database is deployed first because both the backend and frontend depend on it. By establishing the database first, we ensure it's available when the application services start.
+## 3. Use of Persistent Storage
 
-4. **Backend Role** - The backend container is deployed after the database. The backend needs to connect to the database and must be available before the frontend can make API calls to it.
+### MongoDB StatefulSet with Persistent Volumes
+- **volumeClaimTemplates**: Each MongoDB pod gets its own PersistentVolumeClaim
 
-5. **Frontend Role** - The frontend container is deployed last in the application stack, as it depends on the backend API being available.
 
-6. **Deploy Role** - This role uses docker-compose to ensure all containers are properly networked and running together. It serves as a verification step to make sure everything is operational.
+### Backend and Frontend
+- These components are stateless and don't require persistent storage
+- All state is maintained in the database
+- This enables easy scaling and replacement of these pods
 
-## Role Functions and Ansible Modules Used
+### Volume Types Used
+- **PersistentVolumeClaim**: For MongoDB data
 
-### Common Role
-- **Function**: Prepares the base system with all required dependencies and clones the repository.
-- **Modules Used**:
-  - `apt`: Installs required system packages
-  - `file`: Creates directories for the application
-  - `git`: Clones the application repository
-  - `pip`: Installs Python dependencies
-
-### Docker Role
-- **Function**: Installs Docker and Docker Compose, creates a Docker network for container communication.
-- **Modules Used**:
-  - `apt`: Removes old Docker versions and installs new Docker packages
-  - `apt_key`: Adds Docker's GPG key for package verification
-  - `apt_repository`: Adds the Docker repository
-  - `group`: Creates Docker group
-  - `user`: Adds the vagrant user to the Docker group
-  - `command`: Checks Docker Compose version and also create docker network
-  - `get_url`: Downloads Docker Compose
-  - `systemd`: Ensures Docker service is running
-
-### MongoDB Role
-- **Function**: Sets up the MongoDB container for data persistence.
-- **Modules Used**:
-  - `file`: Creates data directory for MongoDB
-  - `command`: Checks if MongoDB container exists and also pull docker image,used in place of docker_image
-
-### Backend Role
-- **Function**: Builds and runs the backend API container.
-- **Modules Used**:
-  - `file`: validates the backend repository exists
-  - `docker_image`: Builds the backend Docker image
-
-### Frontend Role
-- **Function**: Builds and runs the frontend web container.
-- **Modules Used**:
-  - `file`: Ensures client directory exists
-  - `docker_image`: Builds the frontend Docker image
-
-### Deploy Role
-- **Function**: Ensures all containers are running together using docker-compose.
-- **Modules Used**:
-  - `copy`: Copies the docker-compose file
-  - `community.docker.docker_compose_v2`: Deploys the application using docker-compose v2
-  - `command`: Checks running containers
-  - `uri`: Verifies application endpoints
-  - `debug`: Displays application status
+This approach ensures that critical data is preserved while maintaining the flexibility of Kubernetes orchestration.
