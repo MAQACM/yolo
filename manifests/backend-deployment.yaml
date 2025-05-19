@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mark-yolo-backend
+  labels:
+    app: mark-yolo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mark-yolo-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: mark-yolo-backend
+    spec:
+      containers:
+      - name: mark-yolo-backend
+        image: maqacm/mark-yolo-backend:v1.0.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://app-ip-mongo-0.app-ip-mongo:27017/yolomy"
+        - name: PORT
+          value: "5000"
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /api/products
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/products
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
