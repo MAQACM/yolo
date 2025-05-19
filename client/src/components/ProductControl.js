@@ -64,7 +64,7 @@ import EditProductForm from './EditProductForm';
 //     }
 // ]
 class ProductControl extends Component {
-    API_URL = 'http://192.168.56.10:4000' ;
+    API_URL = 'http://34.145.20.111:5000' ;
 
     constructor(props)  {
         super(props);
