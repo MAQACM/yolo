@@ -61,4 +61,17 @@ spec:
       resources:
         requests:
           storage: 1Gi
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-ip-mongo-headless
+  labels:
+    app: app-ip-mongo
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  clusterIP: None
+  selector:
+    app: app-ip-mongo
